@@ -38,18 +38,23 @@ function getTeamPos(data, team){
 	return teamPos;
 }
 
-function getTeamCon(homePld, homeRank, away2Rank){
-	diff = homeRank - away2Rank;
-	if (homePld < 6) {
-		return 1;
-	}
-	else if (Math.abs(diff) < 7) {
-		return 1;
-	}
-	else if(homeRank < away2Rank){
-		return 0.5
-	}
-	else return 1;
+function getTeamCon(homePld, homeRank, awayRank){
+	diff = Math.abs(homeRank - awayRank);
+    if (homePld < 6) {
+        return 1;
+    }
+    else if (diff <= 7 && homeRank < awayRank) {
+        return (1 - (diff / 7))
+    }
+    else if (diff <= 7 && homeRank > awayRank){
+        return 1;
+    }
+    else if (diff > 7 && homeRank < awayRank){
+        return 1 / 7;
+    }
+    else if (diff > 7 && homeRank > awayRank){
+        return 1;
+    }
 }
 
 function teamConcentration(data, team1, team2, date){
@@ -92,14 +97,16 @@ function teamForm(data, team, date){
 		}
 	});
 
-	filterByTeam = _.takeRight(filterByTeam, 5);
+	filterByTeam = _.takeRight(filterByTeam, 10);
 
 	var form = 0;
-	_.each(filterByTeam, function(d){
-		form += result(d.FT);
-	})
+	if (!_.isEmpty(filterByTeam)) {
+		_.each(filterByTeam, function(d) {
+			form += result(d.FT);
+		});
+	}
 
-	return form / 5;
+	return form / 10;
 }
 
 function different(match) {
@@ -107,8 +114,7 @@ function different(match) {
 		score = (match[0].FT).split("-");
 		goal1 = +score[0];
 		goal2 = +score[1];
-
-		return Math.abs(goal1 - goal2) / 10;
+		return (_.max([goal1, goal2]) == 0) ? 0 : (1 - Math.abs(goal1 - goal2) / _.max([goal1, goal2]));
 	} else {
 		return 0;
 	}
@@ -251,11 +257,52 @@ function teamMotivation(standing, home, away) {
 
 			nearestToPos = 1 - ( nearestDist / ( 3 * matchLeft ) );
 
-			motivation = _.max([nearestToPos, derby, tour]);
+			tour = (tour + nearestDist) / 2;
+
+			motivation = _.min([_.max([nearestToPos, derby, tour]), 1]);
 		}
 	});
 
 	return motivation;
+}
+
+function winRatio(data, home, away, date) {
+
+	var newDate = moment(date),
+		wonHome = 0,
+		wonAway = 0;
+
+	filterByDate =	_.filter(data, function(d) {
+		if (moment(d["Date"]).isBefore(newDate))
+			return d;
+	});
+
+	filterByHome = _.filter(filterByDate, function(d){
+		if (home === d["Team 1"]){
+			return d;
+		}
+	});
+	_.each(filterByHome, function(d) {
+		if (result(d.FT) == 0) {
+			wonHome++;
+		}
+	});
+
+	filterByAway = _.filter(filterByDate, function(d){
+		if (away === d["Team 2"]){
+			return d;
+		}
+	});
+	_.each(filterByAway, function(d) {
+		if (result(d.FT) == 1) {
+			wonAway++;
+		}
+	});
+
+	var homeRatio = (filterByHome.length == 0) ? 0 : (wonHome / filterByHome.length),
+		awayRatio = (filterByAway.length == 0) ? 0 : (wonAway / filterByAway.length);
+
+	return [homeRatio, awayRatio];
 }
 
 // JSON to CSV Converter
@@ -279,7 +326,33 @@ function toCSV(objArray) {
 function processData(errors, data) {
 
 	var fea = [],
-		gnd = [];
+		gnd = [],
+		teamIndex = {
+			"year": 2014,
+			"teams": {
+									// ATT MID DEF OVR
+				"Man City": 		[84, 83, 81, 82],
+				"Liverpool": 		[76, 79, 78, 80],
+				"Chelsea": 			[81, 82, 81, 82],
+				"Arsenal": 			[79, 81, 80, 80],
+				"Everton": 			[78, 78, 78, 78],
+				"Tottenham": 		[77, 80, 78, 80],
+				"Man United": 		[85, 79, 80, 82],
+				"Southampton": 		[76, 76, 73, 75],
+				"Stoke": 			[76, 73, 73, 74],
+				"Newcastle": 		[78, 75, 76, 76],
+				"Crystal Palace": 	[71, 72, 71, 72],
+				"Swansea": 			[79, 74, 75, 76],
+				"West Ham": 		[76, 74, 72, 74],
+				"Sunderland": 		[74, 73, 73, 74],
+				"Aston Villa": 		[72, 71, 74, 74],
+				"Hull": 			[72, 71, 71, 72],
+				"West Brom": 		[70, 74, 72, 74],
+				"Norwich": 			[74, 74, 74, 74],
+				"Fulham": 			[71, 74, 72, 75],
+				"Cardiff": 			[72, 70, 73, 72],
+			}
+		};
 
 	_.each(data, function(d) {
 
@@ -289,6 +362,9 @@ function processData(errors, data) {
 			motivation2 = teamMotivation(calcStandings(data, d.Date), d["Team 2"], d["Team 1"]);
 
 		var historyMatch = getHistoryMatch(data, d["Date"], match);
+
+		var winRatioHome = winRatio(data, d["Team 1"], d["Team 2"], d.Date)[0],
+			winRatioAway = winRatio(data, d["Team 1"], d["Team 2"], d.Date)[1];
 
 		concentration = teamConcentration(data, d["Team 1"], d["Team 2"], d.Date);
 
@@ -300,13 +376,25 @@ function processData(errors, data) {
 			"form1": teamForm(data, d["Team 1"], d.Date),
 			"form2": teamForm(data, d["Team 2"], d.Date),
 			"con1": concentration[0],
-			"con2": concentration[1]
+			"con2": concentration[1],
+			"homeRatio": winRatioHome,
+			"awayRatio": winRatioAway,
+			"index1": teamIndex.teams[d["Team 1"]][3] / 100,
+			"index2": teamIndex.teams[d["Team 2"]][3] / 100
 		}
 		fea.push(sample);
 		gnd.push(result(d.FT));
+
 	});
+
+	console.log("fea");
+	console.log(fea = toCSV(fea));
+	console.log("label");
+	console.log(gnd.join(","));
 }
 
 d3.queue()
+    // .defer(d3.csv, "https://raw.githubusercontent.com/footballcsv/eng-england/master/2010s/2012-13/1-premierleague.csv")
     .defer(d3.csv, "https://raw.githubusercontent.com/footballcsv/eng-england/master/2010s/2013-14/1-premierleague.csv")
     .await(processData);
+
