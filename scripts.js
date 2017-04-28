@@ -258,6 +258,24 @@ function teamMotivation(standing, home, away) {
 	return motivation;
 }
 
+// JSON to CSV Converter
+function toCSV(objArray) {
+
+    var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
+    var str = '';
+
+    for (var i = 0; i < array.length; i++) {
+        var line = '';
+        for (var index in array[i]) {
+            if (line != '')
+            	line += ',';
+            line += array[i][index];
+        }
+        str += line + '\r\n';
+    }
+    return str;
+}
+
 function processData(errors, data) {
 
 	var fea = [],
@@ -270,16 +288,11 @@ function processData(errors, data) {
 		var motivation1 = teamMotivation(calcStandings(data, d.Date), d["Team 1"], d["Team 2"]),
 			motivation2 = teamMotivation(calcStandings(data, d.Date), d["Team 2"], d["Team 1"]);
 
-		// debug
-		// console.log(d["Team 1"] + " - " + d["Team 2"] + ": " + motivation1 + " - " + motivation2);
-
 		var historyMatch = getHistoryMatch(data, d["Date"], match);
 
 		concentration = teamConcentration(data, d["Team 1"], d["Team 2"], d.Date);
 
 		var sample = {
-			"team1": d["Team 1"],
-			"team2": d["Team 2"],
 			"history": history(historyMatch),
 			"diff": different(historyMatch),
 			"motivation1": motivation1,
@@ -292,7 +305,6 @@ function processData(errors, data) {
 		fea.push(sample);
 		gnd.push(result(d.FT));
 	});
-	console.log(fea);
 }
 
 d3.queue()
