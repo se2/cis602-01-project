@@ -1,41 +1,40 @@
+function getHistoryMatch(data, date, match) {
 
-function getHistoryMatch(data, date, match){
 	newDate = moment(date);
 
-	filterByDate =	_.filter(data, function(d){
-		if(moment(d["Date"]).isBefore(newDate)){
-				return d;
-		}
-	})
+	filterByDate =	_.filter(data, function(d) {
+		if (moment(d["Date"]).isBefore(newDate))
+			return d;
+	});
 
 	filterByMatch = _.filter(filterByDate, function(d){
-		submatch = generateMatch(d["Team 1"], d["Team 2"]);
-		if (submatch===match) {
+		submatch = matchToString(d["Team 1"], d["Team 2"]);
+		if (submatch === match)
 			return d;
-		}
-	})
+	});
 
 	return filterByMatch;
 }
 
-function generateMatch(team1, team2){
+function matchToString(team1, team2) {
 	var match = [];
 	match.push(team1, team2);
 	return match.sort().toString();
 }
 
-function different(match){
+function different(match) {
 	if (match.length) {
 		score = (match[0].FT).split("-");
 		goal1 = +score[0];
 		goal2 = +score[1];
 
-		return Math.abs(goal1-goal2) / 10;
+		return Math.abs(goal1 - goal2) / 10;
+	} else {
+		return 0;
 	}
-	else return 0;
 }
 
-function result(score){
+function result(score) {
 
 	score = score.split("-");
 	goal1 = +score[0];
@@ -45,19 +44,19 @@ function result(score){
 
 	if (goal1 > goal2)
 		res = 0;
-	else
-		if (goal1 < goal2) res = 2;
+	else if (goal1 < goal2)
+		res = 2;
 	else
 		res = 1;
 
 	return (res / 2);
 }
 
-function history(match){
-	if (match.length) {
+function history(match) {
+	if (match.length)
 		return result(match[0].FT);
-	}
-	else return 0;
+	else
+		return 0;
 }
 
 function calcStandings(data, date) {
@@ -90,22 +89,19 @@ function calcStandings(data, date) {
 				if (t.team == team1.team) {
 					t.for += goal1;
 					t.against += goal2;
-					if (result(d.FT) == 0) {
+					if (result(d.FT) == 0)
 						t.pts += 3;
-					}
 				} else if (t.team == team2.team) {
 					t.for += goal2;
 					t.against += goal1;
-					if (result(d.FT) == 1) {
+					if (result(d.FT) == 1)
 						t.pts += 3;
-					}
 				}
 				if (t.team == team1.team || t.team == team2.team) {
 					t.pld += 1;
 					t.diff = t.for - t.against;
-					if (result(d.FT) == 0.5) {
+					if (result(d.FT) == 0.5)
 						t.pts += 1;
-					}
 				}
 			});
 		}
@@ -118,19 +114,16 @@ function calcStandings(data, date) {
 
 function processData(errors, data) {
 
-	var matrix = [];
-
-	var standings = calcStandings(data, "2014-05-12");
-
-	console.log(standings);
+	var fea = [],
+		gnd = [],
+		standings = calcStandings(data, "2014-05-12");
 
 	_.each(data, function(d) {
 
-		match = generateMatch(d["Team 1"], d["Team 2"]);
+		match = matchToString(d["Team 1"], d["Team 2"]);
 
 		historyMatch = getHistoryMatch(data, d["Date"], match);
 
-		// add to object
 		var sample = {
 			"team1": d["Team 1"],
 			"team2": d["Team 2"],
@@ -138,9 +131,10 @@ function processData(errors, data) {
 			"diff": different(historyMatch)
 		}
 
-		matrix.push(sample);
-	});
+		fea.push(sample);
+		gnd.push(result(d.FT));
 
+	});
 }
 
 d3.queue()
