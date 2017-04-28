@@ -112,11 +112,50 @@ function calcStandings(data, date) {
 	return standings;
 }
 
+function isDerby(team1, team2) {
+	var derdies = [
+			["Man City", "Man United"],
+			["Man City", "Everton"],
+			["Liverpool", "Man United"],
+			["Liverpool", "Everton"],
+			["Chelsea", "Arsenal"],
+			["Chelsea", "Fulham"],
+			["Arsenal", "Tottenham"],
+			["Arsenal", "Man United"],
+			["Newcastle", "Sunderland"],
+			["Aston Villa", "West Brom"],
+			["Cardiff", "Swansea"]
+		];
+
+	var match = matchToString(team1, team2);
+
+	_.each(derdies, function(m) {
+		if (match == matchToString(m[0], m[1]))
+			return true;
+	})
+
+	return false;
+}
+
+function teamMotivation(standing, home, away) {
+	var derby = (isDerby(home, away)) ? 1 : 0,
+		tour = 0,
+		totalTour = 38;
+
+	_.each(standing.table, function(d) {
+		if (d.team == home && (totalTour - d.pld) < 6)
+			tour = 1;
+	});
+
+}
+
 function processData(errors, data) {
 
 	var fea = [],
 		gnd = [],
-		standings = calcStandings(data, "2014-05-12");
+		standings = calcStandings(data, "2014-04-07");
+
+	console.log(standings);
 
 	_.each(data, function(d) {
 

@@ -1,4 +1,4 @@
-# England (and Wales)
+# England (and Wales) Footbal Leagues
 
 Football data for England (and Wales) includes:
 
@@ -6,7 +6,7 @@ Football data for England (and Wales) includes:
 - The Football League (Championship, League One, League Two)
 - Football Conference
 
-Notes: 
+Notes:
 
 - Starting with the 2004/05 season the Football League's Division 1, Division 2 and Division 3 changed to Championship, League One and League Two.
 
@@ -27,20 +27,9 @@ Example - [`2013-14/premierleague.csv`](2010s/2013-14/1-premierleague.csv):
 ...
 ~~~
 
+# Reference
 
-## Tips n Tricks
-
-### Download ZIP Archive - No `git clone` Required
-
-Note: You can download all .csv files packaged into a single-file .zip archive - 
-look for the "Download ZIP" button on this page on the right side at the bottom of the "<> Code" tab.
-If you can't find the "Download ZIP" button, use the [`en-england/archive/master.zip`](https://github.com/footballcsv/en-england/archive/master.zip) link.
-
-
-
-## Questions? Comments?
-
-Send them along to the
-[Open Sports & Friends Forum/Mailing List](http://groups.google.com/group/opensport).
-Thanks!
+- [Data Source](https://github.com/footballcsv/eng-england)
+- [Open Sports & Friends Forum/Mailing List](http://groups.google.com/group/opensport).
+- [football-data.co.uk](http://www.football-data.co.uk/englandm.php)
 
