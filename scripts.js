@@ -22,6 +22,86 @@ function matchToString(team1, team2) {
 	return match.sort().toString();
 }
 
+function getTeamRanking(data, team){
+	teamRanking = _.findIndex(data, function(d){
+		return d.team === team;
+	});
+	return teamRanking;
+}
+
+function getTeamPos(data, team){
+	teamPos = _.filter(data, function(d){
+		if (team === d.team) {
+			return d;
+		}
+	})
+	return teamPos;
+}
+
+function getTeamCon(homePld, homeRank, away2Rank){
+	diff = homeRank - away2Rank;
+	if (homePld < 6) {
+		return 1;
+	}
+	else if (Math.abs(diff) < 7) {
+		return 1;
+	}
+	else if(homeRank < away2Rank){
+		return 0.5
+	}
+	else return 1;
+}
+
+function teamConcentration(data, team1, team2, date){
+
+	var concentration = [],
+
+	standing = calcStandings(data, date);
+
+	team1Ranking = getTeamRanking(standing.table, team1);
+	team2Ranking = getTeamRanking(standing.table, team2);
+
+	team1Pos = getTeamPos(standing.table, team1);
+	team2Pos = getTeamPos(standing.table, team2);
+
+	team1Pld = team1Pos.pld;
+	team2Pld = team2Pos.pld;
+
+	diff = team1Ranking - team2Ranking;
+
+	team1Con = getTeamCon(team1Pld, team1Ranking, team2Ranking);
+	team2Con = getTeamCon(team2Pld, team2Ranking, team1Ranking);
+
+	concentration.push(team1Con, team2Con);
+
+	return concentration;
+}
+
+function teamForm(data, team, date){
+
+	newDate = moment(date);
+
+	filterByDate =	_.filter(data, function(d) {
+		if (moment(d["Date"]).isBefore(newDate))
+			return d;
+	});
+
+	filterByTeam = _.filter(filterByDate, function(d){
+		if (team === d["Team 1"] || team === d["Team 2"]){
+			return d;
+		}
+	});
+
+	filterByTeam = _.takeRight(filterByTeam, 5);
+
+	var form = 0;
+	_.each(filterByTeam, function(d){
+		form += result(d.FT);
+	})
+
+	return form / 5;
+}
+
 function different(match) {
 	if (match.length) {
 		score = (match[0].FT).split("-");
@@ -181,11 +261,7 @@ function teamMotivation(standing, home, away) {
 function processData(errors, data) {
 
 	var fea = [],
-		gnd = [],
-		standing = calcStandings(data, "2014-04-07");
-
-	// debug
-	console.log(standing);
+		gnd = [];
 
 	_.each(data, function(d) {
 
@@ -195,9 +271,11 @@ function processData(errors, data) {
 			motivation2 = teamMotivation(calcStandings(data, d.Date), d["Team 2"], d["Team 1"]);
 
 		// debug
-		console.log(d["Team 1"] + " - " + d["Team 2"] + ": " + motivation1 + " - " + motivation2);
+		// console.log(d["Team 1"] + " - " + d["Team 2"] + ": " + motivation1 + " - " + motivation2);
 
 		var historyMatch = getHistoryMatch(data, d["Date"], match);
+
+		concentration = teamConcentration(data, d["Team 1"], d["Team 2"], d.Date);
 
 		var sample = {
 			"team1": d["Team 1"],
@@ -205,12 +283,16 @@ function processData(errors, data) {
 			"history": history(historyMatch),
 			"diff": different(historyMatch),
 			"motivation1": motivation1,
-			"motivation2": motivation2
+			"motivation2": motivation2,
+			"form1": teamForm(data, d["Team 1"], d.Date),
+			"form2": teamForm(data, d["Team 2"], d.Date),
+			"con1": concentration[0],
+			"con2": concentration[1]
 		}
-
 		fea.push(sample);
 		gnd.push(result(d.FT));
 	});
+	console.log(fea);
 }
 
 d3.queue()
