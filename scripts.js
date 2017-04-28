@@ -130,49 +130,86 @@ function isDerby(team1, team2) {
 	var match = matchToString(team1, team2);
 
 	_.each(derdies, function(m) {
-		if (match == matchToString(m[0], m[1]))
+		if (match == matchToString(m[0], m[1])) {
 			return true;
+		}
 	})
 
 	return false;
 }
 
 function teamMotivation(standing, home, away) {
+
 	var derby = (isDerby(home, away)) ? 1 : 0,
 		tour = 0,
-		totalTour = 38;
+		totalTour = 38,
+		nearestToPos = 0;
+		keyPos = [0, 1, 2, 3, 4, 5, 16, 17],
+		motivation = 1;
 
-	_.each(standing.table, function(d) {
-		if (d.team == home && (totalTour - d.pld) < 6)
+	_.each(standing.table, function(d, i) {
+
+		if (d.team == home && (totalTour - d.pld) < 6 && _.includes(keyPos, i)) {
 			tour = 1;
+		}
+
+		if (d.pld > 6 && d.team == home) {
+			var distToNearPos = [];
+
+			var left = _.filter(keyPos, function(x) { return (x < i) }),
+				right = _.filter(keyPos, function(x) { return (x > i) }),
+				nearestPos = _.union(_.takeRight(left), _.take(right));
+
+			_.each(nearestPos, function(x) {
+				var dist = Math.abs(standing.table[i]["pts"] - standing.table[x]["pts"])
+					distToPos = { "key": x, "value": dist };
+				distToNearPos.push(distToPos);
+			});
+
+			var nearestDist = _.minBy(distToNearPos, "value").value,
+				matchLeft = totalTour - d.pld;
+
+			nearestToPos = 1 - ( nearestDist / ( 3 * matchLeft ) );
+
+			motivation = _.max([nearestToPos, derby, tour]);
+		}
 	});
 
+	return motivation;
 }
 
 function processData(errors, data) {
 
 	var fea = [],
 		gnd = [],
-		standings = calcStandings(data, "2014-04-07");
+		standing = calcStandings(data, "2014-04-07");
 
-	console.log(standings);
+	// debug
+	console.log(standing);
 
 	_.each(data, function(d) {
 
-		match = matchToString(d["Team 1"], d["Team 2"]);
+		var match = matchToString(d["Team 1"], d["Team 2"]);
 
-		historyMatch = getHistoryMatch(data, d["Date"], match);
+		var motivation1 = teamMotivation(calcStandings(data, d.Date), d["Team 1"], d["Team 2"]),
+			motivation2 = teamMotivation(calcStandings(data, d.Date), d["Team 2"], d["Team 1"]);
+
+		// debug
+		console.log(d["Team 1"] + " - " + d["Team 2"] + ": " + motivation1 + " - " + motivation2);
+
+		var historyMatch = getHistoryMatch(data, d["Date"], match);
 
 		var sample = {
 			"team1": d["Team 1"],
 			"team2": d["Team 2"],
 			"history": history(historyMatch),
-			"diff": different(historyMatch)
+			"diff": different(historyMatch),
+			"motivation1": motivation1,
+			"motivation2": motivation2
 		}
 
 		fea.push(sample);
 		gnd.push(result(d.FT));
-
 	});
 }
 
