@@ -306,20 +306,41 @@ function winRatio(data, home, away, date) {
 }
 
 // JSON to CSV Converter
-function toCSV(objArray) {
+function toCSV(data, filename) {
 
-    var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
     var str = '';
 
-    for (var i = 0; i < array.length; i++) {
-        var line = '';
-        for (var index in array[i]) {
-            if (line != '')
-            	line += ',';
-            line += array[i][index];
-        }
-        str += line + '\r\n';
+    if (typeof data == 'string') {
+    	str = data;
+    } else {
+
+    	var array = typeof data != 'object' ? JSON.parse(data) : data;
+
+	    for (var i = 0; i < array.length; i++) {
+	        var line = '';
+	        for (var index in array[i]) {
+	            if (line != '')
+	            	line += ',';
+	            line += array[i][index];
+	        }
+	        str += line + '\r\n';
+	    }
     }
+
+    var blob = new Blob([str]);
+
+    if (window.navigator.msSaveOrOpenBlob) {
+    	// IE hack; see http://msdn.microsoft.com/en-us/library/ie/hh779016.aspx
+        window.navigator.msSaveBlob(blob, filename);
+    } else {
+        var a = window.document.createElement("a");
+        a.href = window.URL.createObjectURL(blob, {type: "text/plain"});
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();  // IE: "Access is denied"; see: https://connect.microsoft.com/IE/feedback/details/797361/ie-10-treats-blob-url-as-cross-origin-and-denies-access
+        document.body.removeChild(a);
+    }
+
     return str;
 }
 
@@ -353,6 +374,8 @@ function processData(errors, data) {
 				"Cardiff": 			[72, 70, 73, 72],
 			}
 		};
+	// log running time
+	var t0 = performance.now();
 
 	_.each(data, function(d) {
 
@@ -378,23 +401,22 @@ function processData(errors, data) {
 			"con1": concentration[0],
 			"con2": concentration[1],
 			"homeRatio": winRatioHome,
-			"awayRatio": winRatioAway,
-			"index1": teamIndex.teams[d["Team 1"]][3] / 100,
-			"index2": teamIndex.teams[d["Team 2"]][3] / 100
+			"awayRatio": winRatioAway
 		}
 		fea.push(sample);
 		gnd.push(result(d.FT));
 
 	});
 
-	console.log("fea");
-	console.log(fea = toCSV(fea));
-	console.log("label");
-	console.log(gnd.join(","));
+	var t1 = performance.now();
+	console.log("process data: " + numeral((t1 - t0) / 1000).format('0.000') + " seconds.");
+
+	// export csv files
+	toCSV(fea, "fea.csv");
+	toCSV(gnd.join(","), "gnd.csv");
 }
 
 d3.queue()
-    // .defer(d3.csv, "https://raw.githubusercontent.com/footballcsv/eng-england/master/2010s/2012-13/1-premierleague.csv")
     .defer(d3.csv, "https://raw.githubusercontent.com/footballcsv/eng-england/master/2010s/2013-14/1-premierleague.csv")
     .await(processData);
 
