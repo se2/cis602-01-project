@@ -8,12 +8,12 @@ close all
 fea = csvread('fea.csv');
 gnd = csvread('gnd.csv');
 gnd = gnd';
+numTrain = 190;
+trainFea = fea(1:numTrain,:);
+trainLabel = gnd(1:numTrain,:);
 
-trainFea = fea(1:190,:);
-trainLabel = gnd(1:190,:);
-
-testFea = fea(191:380,:);
-testLabel = gnd(191:380,:);
+testFea = fea(numTrain + 1:380,:);
+testLabel = gnd(numTrain + 1:380,:);
 
 [nFea, n] = size(trainFea);
 
@@ -23,7 +23,6 @@ cross_validation = ' -v 5 ';
 C = [5, 10, 15, 20];
 % gamma
 gamma = [0.001, 0.01, 0.1, 1, 10];
-
 % 
 
 %% Linear kernel

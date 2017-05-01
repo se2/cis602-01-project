@@ -8,7 +8,7 @@ function getHistoryMatch(data, date, team1, team2) {
 			return d;
 	});
 
-	filterByMatch = _.filter(filterByDate, function(d){
+	filterByMatch = _.filter(filterByDate, function(d) {
 		submatch = matchToString(d["Team 1"], d["Team 2"]);
 		if (submatch === match)
 			return d;
@@ -23,15 +23,15 @@ function matchToString(team1, team2) {
 	return match.sort().toString();
 }
 
-function getTeamRanking(data, team){
-	teamRanking = _.findIndex(data, function(d){
+function getTeamRanking(data, team) {
+	teamRanking = _.findIndex(data, function(d) {
 		return d.team === team;
 	});
 	return teamRanking;
 }
 
-function getTeamPos(data, team){
-	teamPos = _.filter(data, function(d){
+function getTeamPos(data, team) {
+	teamPos = _.filter(data, function(d) {
 		if (team === d.team) {
 			return d;
 		}
@@ -39,7 +39,7 @@ function getTeamPos(data, team){
 	return teamPos;
 }
 
-function getTeamCon(homePld, homeRank, awayRank){
+function getTeamCon(homePld, homeRank, awayRank) {
 	diff = Math.abs(homeRank - awayRank);
     if (homePld < 6) {
         return 1;
@@ -47,22 +47,18 @@ function getTeamCon(homePld, homeRank, awayRank){
     else if (diff <= 7 && homeRank < awayRank) {
         return (1 - (diff / 7))
     }
-    else if (diff <= 7 && homeRank > awayRank){
+    else if (diff <= 7 && homeRank > awayRank) {
         return 1;
     }
-    else if (diff > 7 && homeRank < awayRank){
+    else if (diff > 7 && homeRank < awayRank) {
         return 1 / 7;
     }
-    else if (diff > 7 && homeRank > awayRank){
+    else if (diff > 7 && homeRank > awayRank) {
         return 1;
     }
 }
 
-function teamConcentration(data, team1, team2, date){
-
-	var concentration = [],
-
-	standing = calcStandings(data, date);
+function teamConcentration(standing, team1, team2) {
 
 	team1Ranking = getTeamRanking(standing.table, team1);
 	team2Ranking = getTeamRanking(standing.table, team2);
@@ -70,30 +66,19 @@ function teamConcentration(data, team1, team2, date){
 	team1Pos = getTeamPos(standing.table, team1);
 	team2Pos = getTeamPos(standing.table, team2);
 
-	team1Pld = team1Pos.pld;
-	team2Pld = team2Pos.pld;
+	team1Con = getTeamCon(team1Pos.pld, team1Ranking, team2Ranking);
+	team2Con = getTeamCon(team2Pos.pld, team2Ranking, team1Ranking);
 
-	diff = team1Ranking - team2Ranking;
-
-	team1Con = getTeamCon(team1Pld, team1Ranking, team2Ranking);
-	team2Con = getTeamCon(team2Pld, team2Ranking, team1Ranking);
-
-	concentration.push(team1Con, team2Con);
-
-	return concentration;
+	return [team1Con, team2Con];
 }
 
-function teamForm(data, team, date){
+function teamForm(data, team, date) {
 
-	newDate = moment(date);
+	var newDate = moment(date);
 
-	filterByDate =	_.filter(data, function(d) {
-		if (moment(d["Date"]).isBefore(newDate))
-			return d;
-	});
-
-	filterByTeam = _.filter(filterByDate, function(d){
-		if (team === d["Team 1"] || team === d["Team 2"]){
+	filterByTeam = _.filter(data, function(d) {
+		if ((moment(d["Date"]).isBefore(newDate)) &&
+			(team === d["Team 1"] || team === d["Team 2"])) {
 			return d;
 		}
 	});
@@ -267,8 +252,6 @@ function teamMotivation(standing, home, away) {
 
 			nearestToPos = 1 - ( nearestDist / ( 3 * matchLeft ) );
 
-			tour = (tour + nearestDist) / 2;
-
 			motivation = _.min([_.max([nearestToPos, derby, tour]), 1]);
 		}
 	});
@@ -280,37 +263,30 @@ function winRatio(data, home, away, date) {
 
 	var newDate = moment(date),
 		wonHome = 0,
-		wonAway = 0;
+		wonAway = 0,
+		totalHome = 0,
+		totalAway = 0;
 
 	filterByDate =	_.filter(data, function(d) {
 		if (moment(d["Date"]).isBefore(newDate))
 			return d;
 	});
 
-	filterByHome = _.filter(filterByDate, function(d){
-		if (home === d["Team 1"]){
-			return d;
+	_.each(filterByDate, function(d) {
+		if (home === d["Team 1"]) {
+			totalHome++;
+			if (result(d.FT) == 0)
+				wonHome++;
 		}
-	});
-	_.each(filterByHome, function(d) {
-		if (result(d.FT) == 0) {
-			wonHome++;
-		}
-	});
-
-	filterByAway = _.filter(filterByDate, function(d){
-		if (away === d["Team 2"]){
-			return d;
-		}
-	});
-	_.each(filterByAway, function(d) {
-		if (result(d.FT) == 1) {
-			wonAway++;
+		if (away === d["Team 2"]) {
+			totalAway++;
+			if (result(d.FT) == 1)
+				wonAway++;
 		}
 	});
 
-	var homeRatio = (filterByHome.length == 0) ? 0 : (wonHome / filterByHome.length),
-		awayRatio = (filterByAway.length == 0) ? 0 : (wonAway / filterByAway.length);
+	var homeRatio = (totalHome == 0) ? 0 : (wonHome / totalHome),
+		awayRatio = (totalAway == 0) ? 0 : (wonAway / totalAway);
 
 	return [homeRatio, awayRatio];
 }
@@ -358,7 +334,7 @@ function processData(errors, data1, data2) {
 
 	if (errors) throw errors;
 
-	var dataset = [data1, data2];
+	var dataset = [data2];
 
 	_.each(dataset, function(data) {
 
@@ -370,16 +346,18 @@ function processData(errors, data1, data2) {
 
 		_.each(data, function(d) {
 
-			var motivation1 = teamMotivation(calcStandings(data, d.Date), d["Team 1"], d["Team 2"]),
-				motivation2 = teamMotivation(calcStandings(data, d.Date), d["Team 2"], d["Team 1"]);
+			var standing = calcStandings(data, d.Date);
+
+			var motivation1 = teamMotivation(standing, d["Team 1"], d["Team 2"]),
+				motivation2 = teamMotivation(standing, d["Team 2"], d["Team 1"]);
 
 			var historyMatch = getHistoryMatch(data, d["Date"], d["Team 1"], d["Team 2"]);
 
 			var winRatioHome = winRatio(data, d["Team 1"], d["Team 2"], d.Date)[0],
-				winRatioAway = winRatio(data, d["Team 1"], d["Team 2"], d.Date)[1];
+				winRatioAway = winRatio(data, d["Team 1"], d["Team 2"], d.Date)[1],
+				concentration = teamConcentration(standing, d["Team 1"], d["Team 2"]);
 
-			concentration = teamConcentration(data, d["Team 1"], d["Team 2"], d.Date);
-
+			// history,diff,motivation1,motivation2,form1,form2,concentration1,concentration2,homeRatio,awayRatio
 			var sample = {
 				"history": history(historyMatch),
 				"diff": different(historyMatch),
@@ -408,19 +386,8 @@ function processData(errors, data1, data2) {
 		// export csv files
 		toCSV(fea, "fea.csv");
 		toCSV(gnd.join(","), "gnd.csv");
-
 	});
-
 }
-
-// d3.queue()
-// 	.defer(d3.csv, "https://raw.githubusercontent.com/footballcsv/eng-england/master/2010s/2012-13/1-premierleague.csv")
-//     .defer(d3.csv, "https://raw.githubusercontent.com/footballcsv/eng-england/master/2010s/2013-14/1-premierleague.csv")
-//     .await(processData);
-
-d3.queue()
-    .defer(d3.csv, "https://raw.githubusercontent.com/footballcsv/eng-england/master/2010s/2013-14/1-premierleague.csv")
-    .await(testLabel);
 
 function testLabel(errors, data) {
 
@@ -439,7 +406,7 @@ function testLabel(errors, data) {
 			ranking1 = getTeamRanking(standing.table, data[190 + i]["Team 1"]),
 			ranking2 = getTeamRanking(standing.table, data[190 + i]["Team 2"]);
 
-		if (gnd[i] != prediction[i] && gnd[i] == 1) {
+		if (gnd[i] != prediction[i] && gnd[i] == 1 && Math.abs(ranking2 - ranking1) < 7) {
 
 			wrong.push({
 				"gnd": gnd[i],
@@ -455,3 +422,11 @@ function testLabel(errors, data) {
 	console.log(wrong);
 }
 
+d3.queue()
+	.defer(d3.csv, "https://raw.githubusercontent.com/footballcsv/eng-england/master/2010s/2012-13/1-premierleague.csv")
+    .defer(d3.csv, "https://raw.githubusercontent.com/footballcsv/eng-england/master/2010s/2013-14/1-premierleague.csv")
+    .await(processData);
+
+// d3.queue()
+//     .defer(d3.csv, "https://raw.githubusercontent.com/footballcsv/eng-england/master/2010s/2013-14/1-premierleague.csv")
+//     .await(testLabel);
