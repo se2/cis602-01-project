@@ -19,15 +19,16 @@ for i=numTrain
    gau = predictSVM(fea, gnd, i, 'gau');
    gau_acc = [gau_acc gau];
    
-   knnModel = fitcknn(fea(1:i,:), gnd(1:i,:), 'NumNeighbors', 3);
+   
+   knnModel = fitcknn(fea(1:i,:), gnd(1:i,:));
    knnLabel = predict(knnModel, fea(i+1:380,:));
    kacc = sum(knnLabel == gnd(i+1:380,:)) / length(gnd(i+1:380,:));
    knn_acc = [knn_acc kacc];
 
 end
 plot(numTrain, lin_acc, numTrain, poly_acc, numTrain, gau_acc,numTrain, knn_acc);
-title('Season 11-12')
+title('Season 15-16')
 xlabel('Number of training')
 % xticks(numTrain)
 ylabel('Accuracy')
-legend('SVM-Linear','SVM-Polynomial', 'SVM-Gausian','KNN', 'Location','southeast');
+legend('SVM-Linear','SVM-Polynomial', 'SVM-Gausian',' Forest','KNN', 'Location','southeast');
